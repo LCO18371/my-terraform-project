@@ -1,27 +1,35 @@
 terraform {
   backend "s3" {
-    bucket         = "nv-terraform-st-bucket"
-    key            = "terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
+    bucket  = "nv-terraform-st-bucket"
+    key     = "terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
   }
 }
 
 module "iam_roles" {
   source = "./modules/iam_roles"
-  app_name = var.app_name
+
+  for_each = { for pipeline in var.pipelines : pipeline.app_name => pipeline }
+
+  app_name = each.value.app_name
 }
+
 
 module "codepipeline" {
   source = "./modules/codepipeline"
-  app_name = var.app_name
-  cloudformation_role_arn = module.iam_roles.cloudformation_role_arn
-  codepipeline_role_arn = module.iam_roles.codepipeline_role_arn  # FIXED
-  codebuild_role_arn = module.iam_roles.codebuild_role_arn
-  aws_region = var.aws_region
-  sam_output_file = var.sam_output_file
-  parameters_file = var.parameters_file
-  github_repo_branch = var.github_repo_branch
-  github_repo_name = var.github_repo_name
-  buildspec_file_api = var.buildspec_file_api
+
+  for_each = { for pipeline in var.pipelines : pipeline.app_name => pipeline }
+
+  app_name                = each.value.app_name
+  cloudformation_role_arn = module.iam_roles[each.key].cloudformation_role_arn
+  codepipeline_role_arn   = module.iam_roles[each.key].codepipeline_role_arn
+  codebuild_role_arn      = module.iam_roles[each.key].codebuild_role_arn
+  aws_region              = var.aws_region
+  sam_output_file         = each.value.sam_output_file
+  parameters_file         = each.value.parameters_file
+  github_repo_branch      = each.value.github_repo_branch
+  github_repo_name        = each.value.github_repo_name
+  buildspec_file_api      = each.value.buildspec_file_api
 }
+
