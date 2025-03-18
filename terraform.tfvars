@@ -2,7 +2,7 @@
 aws_region = "us-east-1"
 
 # Application Name
-app_name = "nvprd-hc-vitals"
+app_name = "nvprd-hc-product"
 
 # GitHub Repository Details
 github_repo_name   = "my-terraform-project"
