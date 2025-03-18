@@ -13,9 +13,9 @@ github_user        = "LCO18371"
 github_token = "12345"
 
 # CodePipeline Configuration
-parameters_file = "vitals_sync/prd_parameters.json"
-sam_input_file = "vitals_sync/saml.yaml"
-sam_output_file = "post-saml.yaml"
+parameters_file    = "vitals_sync/prd_parameters.json"
+sam_input_file     = "vitals_sync/saml.yaml"
+sam_output_file    = "post-saml.yaml"
 buildspec_file_api = "vitals_sync/buildspec.yml"
 
 # Add missing variables
