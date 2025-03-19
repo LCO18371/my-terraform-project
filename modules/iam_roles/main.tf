@@ -17,7 +17,7 @@ POLICY
 }
 
 resource "aws_iam_policy" "codebuild_policy" {
-  name        = "CodeBuildRolePolicy"
+  name        = "${var.app_name}-CodeBuildRolePolicy"
   description = "IAM policy for AWS CodeBuild service role"
 
   policy = <<POLICY
@@ -56,7 +56,7 @@ POLICY
 }
 
 resource "aws_iam_policy" "cloudformation_policy" {
-  name        = "CloudFormationRolePolicy"
+  name        = "${var.app_name}-CloudFormationRolePolicy"
   description = "IAM policy for AWS CloudFormation service role"
 
   policy = <<POLICY
@@ -99,7 +99,7 @@ POLICY
 }
 
 resource "aws_iam_policy" "codepipeline_policy" {
-  name        = "CodePipelineRolePolicy"
+  name        = "${var.app_name}-CodePipelineRolePolicy"
   description = "IAM policy for AWS CodePipeline service role"
 
   policy = <<POLICY
