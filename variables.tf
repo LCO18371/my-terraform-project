@@ -27,6 +27,7 @@ variable "pipelines" {
     parameters_file    = string
     sam_input_file     = string
     sam_output_file    = string
+     # ✅ Ensure this is included
   }))
   description = "List of pipelines to be created dynamically"
 }
