@@ -3,20 +3,23 @@ version: 0.2
 phases:
   install:
     commands:
-      - echo "Restoring Terraform from cache..."
-      - terraform --version || (sudo apt update && sudo apt install -y terraform)
+      - echo "Installing Terraform on Ubuntu..."
+      - wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      - sudo apt update && sudo apt install -y terraform
+      - terraform --version
   pre_build:
     commands:
       - echo "Initializing Terraform..."
       - terraform init
   build:
     commands:
-      - echo "Applying Terraform plan..."
-      - terraform apply -input=false tfplan
+      - echo "Generating Terraform plan..."
+      - terraform plan -out=tfplan
 
 artifacts:
   files:
-    - apply_output.log
+    - tfplan
 
 cache:
   paths:
