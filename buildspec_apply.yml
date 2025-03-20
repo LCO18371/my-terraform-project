@@ -15,7 +15,7 @@ phases:
   build:
     commands:
       - echo "Generating Terraform plan..."
-      - terraform apply "tfplan"
+      - terraform apply
 
 artifacts:
   files:
