@@ -1,19 +1,33 @@
 version: 0.2
 
+env:
+  variables:
+    TF_VERSION: "0.15.5"
+    PERMISSION_SETS_DIR: "permission_sets"
+
 phases:
   install:
     commands:
-      - export release=AmazonLinux
-      - dnf install -y dnf-plugins-core
-      - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/$release/hashicorp.repo
-      - dnf install -y terraform
+      - yum install -y amazon-linux-extras  # Using yum instead of dnf
+      - cd /usr/bin
+      - curl -s -qL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
+      - unzip -o terraform.zip
+      - terraform --version
+
   build:
     commands:
-      - terraform init
-      - terraform init -reconfigure
-      - terraform fmt
-      - terraform fmt -check
-      - terraform plan -input=false -out=tfplan
+      - cd ${CODEBUILD_SRC_DIR}/configurations || exit 1  # Exit if the directory does not exist
+      - cp -r *.tf ${PERMISSION_SETS_DIR}/
+      - cd ${CODEBUILD_SRC_DIR}/configurations/${PERMISSION_SETS_DIR} || exit 1
+      - terraform init -no-color
+      - terraform plan -out=tfplan_commitid_${CODEBUILD_RESOLVED_SOURCE_VERSION}_pipelineid_${PIPELINE_EXECUTION_ID}
+      - cp tfplan_commitid_${CODEBUILD_RESOLVED_SOURCE_VERSION}_pipelineid_${PIPELINE_EXECUTION_ID} ${CODEBUILD_SRC_DIR}/
+
+  post_build:
+    commands:
+      - echo "Terraform plan completed on $(date)"
+
 artifacts:
   files:
-    - tfplan
+    - tfplan_commitid_${CODEBUILD_RESOLVED_SOURCE_VERSION}_pipelineid_${PIPELINE_EXECUTION_ID}
+  name: tfplan
