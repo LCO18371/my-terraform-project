@@ -15,7 +15,7 @@ resource "aws_codebuild_project" "terraform_plan_build" {
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "buildspec-plan.yml"  # Run only terraform plan
+    buildspec = "buildspec.yml"  # Run only terraform plan
   }
 }
 
@@ -36,7 +36,7 @@ resource "aws_codebuild_project" "terraform_apply_build" {
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "buildspec-apply.yml"  # Run only terraform apply
+    buildspec = "buildspec_apply.yml"  # Run only terraform apply
   }
 }
 
