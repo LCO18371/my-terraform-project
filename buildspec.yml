@@ -1,33 +1,20 @@
 version: 0.2
 
-env:
-  variables:
-    TF_VERSION: "0.15.5"
-    PERMISSION_SETS_DIR: "permission_sets"
-
 phases:
   install:
+    runtime-versions:
+      python: latest
     commands:
-      - yum install -y amazon-linux-extras  # Using yum instead of dnf
-      - cd /usr/bin
-      - curl -s -qL -o terraform.zip https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip
-      - unzip -o terraform.zip
+      - echo "Installing Terraform on Ubuntu..."
+      - wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+      - sudo apt update && sudo apt install -y terraform
       - terraform --version
-
+  pre_build:
+    commands:
+      - echo "Initializing Terraform..."
+      - terraform init
   build:
     commands:
-      - cd ${CODEBUILD_SRC_DIR}/configurations || exit 1  # Exit if the directory does not exist
-      - cp -r *.tf ${PERMISSION_SETS_DIR}/
-      - cd ${CODEBUILD_SRC_DIR}/configurations/${PERMISSION_SETS_DIR} || exit 1
-      - terraform init -no-color
-      - terraform plan -out=tfplan_commitid_${CODEBUILD_RESOLVED_SOURCE_VERSION}_pipelineid_${PIPELINE_EXECUTION_ID}
-      - cp tfplan_commitid_${CODEBUILD_RESOLVED_SOURCE_VERSION}_pipelineid_${PIPELINE_EXECUTION_ID} ${CODEBUILD_SRC_DIR}/
-
-  post_build:
-    commands:
-      - echo "Terraform plan completed on $(date)"
-
-artifacts:
-  files:
-    - tfplan_commitid_${CODEBUILD_RESOLVED_SOURCE_VERSION}_pipelineid_${PIPELINE_EXECUTION_ID}
-  name: tfplan
+      - echo "Planning Terraform deployment..."
+      - terraform plan --generate-config-out=s3_existing.tf -var-file="dev.tfvars" -out=tfplan
