@@ -1,7 +1,7 @@
 
 pipelines = [
   {
-    app_name           = "nvprd-hc-product-ravi"
+    app_name           = "nvprd-hc-product-ravi-test"
     github_repo_name   = "my-terraform-project"
     github_repo_branch = "main"
     github_user        = "LCO18371"
