@@ -2,8 +2,6 @@ version: 0.2
 
 phases:
   install:
-    runtime-versions:
-      python: latest
     commands:
       - echo "Installing Terraform on Ubuntu..."
       - wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -16,5 +14,14 @@ phases:
       - terraform init
   build:
     commands:
-      - echo "Planning Terraform deployment..."
+      - echo "Generating Terraform plan..."
       - terraform plan -out=tfplan
+
+artifacts:
+  files:
+    - tfplan
+
+cache:
+  paths:
+    - /usr/bin/terraform
+    - /usr/share/keyrings/hashicorp-archive-keyring.gpg

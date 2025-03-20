@@ -1,11 +1,24 @@
 version: 0.2
+
 phases:
   install:
     commands:
-      - yum install -y yum-utils
-      - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-      - yum -y install terraform
+      - echo "Restoring Terraform from cache..."
+      - terraform --version || (sudo apt update && sudo apt install -y terraform)
+  pre_build:
+    commands:
+      - echo "Initializing Terraform..."
+      - terraform init
   build:
     commands:
-      - terraform init
-      - terraform apply -auto-approve tfplan
+      - echo "Applying Terraform plan..."
+      - terraform apply -input=false tfplan
+
+artifacts:
+  files:
+    - apply_output.log
+
+cache:
+  paths:
+    - /usr/bin/terraform
+    - /usr/share/keyrings/hashicorp-archive-keyring.gpg
