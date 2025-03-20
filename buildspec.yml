@@ -17,4 +17,4 @@ phases:
   build:
     commands:
       - echo "Planning Terraform deployment..."
-      - terraform plan --generate-config-out=s3_existing.tf -var-file="main.tf" -out=tfplan
+      - terraform plan -out=tfplan
