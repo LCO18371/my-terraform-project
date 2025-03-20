@@ -1,6 +1,6 @@
-resource "aws_codebuild_project" "build" {
-  name         = "codebuild-${var.app_name}"
-  description  = "CodeBuild project for ${var.app_name}"
+resource "aws_codebuild_project" "terraform_plan_build" {
+  name         = "terraform-plan-${var.app_name}"
+  description  = "CodeBuild project for running terraform plan"
   service_role = var.codebuild_role_arn
 
   artifacts {
@@ -15,7 +15,28 @@ resource "aws_codebuild_project" "build" {
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = var.buildspec_file_api
+    buildspec = "buildspec-plan.yml"  # Run only terraform plan
+  }
+}
+
+resource "aws_codebuild_project" "terraform_apply_build" {
+  name         = "terraform-apply-${var.app_name}"
+  description  = "CodeBuild project for running terraform apply"
+  service_role = var.codebuild_role_arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type = "BUILD_GENERAL1_SMALL"
+    image        = var.CodeBuildImage
+    type         = "LINUX_CONTAINER"
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "buildspec-apply.yml"  # Run only terraform apply
   }
 }
 
@@ -24,7 +45,7 @@ resource "aws_codepipeline" "project_pipeline" {
   role_arn = var.codepipeline_role_arn
 
   artifact_store {
-    location = "nv-tf-artifacts-bucket"  # Use existing bucket name
+    location = "nv-tf-artifacts-bucket"
     type     = "S3"
   }
 
@@ -47,119 +68,44 @@ resource "aws_codepipeline" "project_pipeline" {
   }
 
   stage {
-    name = "Build"
+    name = "Terraform-Plan"
     action {
-      name             = "Build"
+      name             = "TerraformPlan"
       category         = "Build"
       owner            = "AWS"
       provider         = "CodeBuild"
       version          = "1"
       input_artifacts  = ["SourceArtifact"]
-      output_artifacts = ["BuildArtifact"]
+      output_artifacts = ["PlanArtifact"]  # This stores the Terraform plan output
       configuration = {
-        ProjectName = aws_codebuild_project.build.name
+        ProjectName = aws_codebuild_project.terraform_plan_build.name
       }
     }
   }
 
   stage {
-    name = "Deploy"
-    
-    # Action Group 1: Create ChangeSet
+    name = "ManualApproval"
     action {
-      name            = "CreateChangeSet"
-      category        = "Deploy"
-      owner           = "AWS"
-      provider        = "CloudFormation"
-      version         = "1"
-      input_artifacts = ["BuildArtifact", "SourceArtifact"]
-      configuration = {
-        StackName           = "${var.app_name}-serverless-stack"
-        ActionMode          = "CHANGE_SET_REPLACE"
-        RoleArn             = var.cloudformation_role_arn
-        ChangeSetName       = "pipeline-changeset"
-        Capabilities        = "CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM"
-        TemplatePath        = "BuildArtifact::${var.sam_output_file}"
-        TemplateConfiguration = "SourceArtifact::${var.parameters_file}"
-      }
-    }
-
-    # Action Group 2: Manual Approval
-    action {
-      name       = "ManualApproval"
-      category   = "Approval"
-      owner      = "AWS"
-      provider   = "Manual"
-      version    = "1"
-    }
-
-    # Action Group 3: Execute ChangeSet
-    action {
-      name            = "ExecuteChangeSet"
-      category        = "Deploy"
-      owner           = "AWS"
-      provider        = "CloudFormation"
-      version         = "1"
-      input_artifacts = ["BuildArtifact", "SourceArtifact"]
-      configuration = {
-        StackName     = "${var.app_name}-serverless-stack"
-        ActionMode    = "CHANGE_SET_EXECUTE"
-        RoleArn       = var.cloudformation_role_arn
-        ChangeSetName = "pipeline-changeset"
-      }
+      name     = "ManualApproval"
+      category = "Approval"
+      owner    = "AWS"
+      provider = "Manual"
+      version  = "1"
     }
   }
 
-  # Other pipeline stages can go here...
+  stage {
+    name = "Terraform-Apply"
+    action {
+      name             = "TerraformApply"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["PlanArtifact"]  # Takes the output of Terraform plan
+      configuration = {
+        ProjectName = aws_codebuild_project.terraform_apply_build.name
+      }
+    }
+  }
 }
-
-  # stage {
-  #   name = "Deploy-CreateChangeSet"
-  #   action {
-  #     name            = "CreateChangeSet"
-  #     category        = "Deploy"
-  #     owner           = "AWS"
-  #     provider        = "CloudFormation"
-  #     version         = "1"
-  #     input_artifacts = ["BuildArtifact", "SourceArtifact"]
-  #     configuration = {
-  #       StackName           = "${var.app_name}-serverless-stack"
-  #       ActionMode          = "CHANGE_SET_REPLACE"
-  #       RoleArn             = aws_iam_role.cloudformation_role.arn
-  #       ChangeSetName       = "pipeline-changeset"
-  #       Capabilities        = "CAPABILITY_IAM,CAPABILITY_AUTO_EXPAND,CAPABILITY_NAMED_IAM"
-  #       TemplatePath        = "BuildArtifact::${var.SAMOutputFile}"
-  #       TemplateConfiguration = "SourceArtifact::${var.ParametersFile}"
-  #     }
-  #   }
-  # }
-
-  # stage {
-  #   name = "Approval"
-  #   action {
-  #     name       = "ManualApproval"
-  #     category   = "Approval"
-  #     owner      = "AWS"
-  #     provider   = "Manual"
-  #     version    = "1"
-  #   }
-  # }
-
-  # stage {
-  #   name = "Deploy-ExecuteChangeSet"
-  #   action {
-  #     name            = "ExecuteChangeSet"
-  #     category        = "Deploy"
-  #     owner           = "AWS"
-  #     provider        = "CloudFormation"
-  #     version         = "1"
-  #     input_artifacts = ["BuildArtifact", "SourceArtifact"]
-  #     configuration = {
-  #       StackName     = "${var.app_name}-serverless-stack"
-  #       ActionMode    = "CHANGE_SET_EXECUTE"
-  #       RoleArn       = aws_iam_role.cloudformation_role.arn
-  #       ChangeSetName = "pipeline-changeset"
-  #     }
-  #   }
-  # }
-
